@@ -6,9 +6,8 @@ from scipy import stats
 def SIR_Stoch_vol(N,Y,rho,sigma,beta):
     """
     function for estimating parameters for a stochastic volatility model.
-    Paramters taken are N the number of paths to simulate, Y the observed returns, T the number of time steps 
-    and model parameters to be tested rho, sigma and beta 
-    the output is a likelihood value for the give parameters
+    Paramters taken are N the number of paths to simulate, Y the observed returns, model parameters to be tested rho, sigma and beta 
+    the output is a likelihood value for the given parameters
     
     """
     T = len(Y)
@@ -46,31 +45,46 @@ def SIR_Stoch_vol(N,Y,rho,sigma,beta):
     ## calcuate mean and variance
         xmean[i] = np.mean(SIRMatrix[i,])
         xvariance[i] = np.mean(SIRMatrix[i,]**2)-xmean[i]**2
+
+    #calculate the likelihood for the model
         
     likelihood = np.cumsum(np.log(np.mean(UnnormalizedWeights,axis=1)))
     
-    return [xmean , xvariance, likelihood, SampledValues]
+    # return mean , variance, likelihhod and actual values sampled 
+    return [xmean , xvariance, likelihood, SIRMatrix]
 
 
 
 ### this method is poor and inefficient there are many ways to imporve it such as SGD but this also comes with issues
 def maximum_like(rho_len,sigma_len,N,Y):
+    """
+    Function to find the maximum likelihood values of the stochastic 
+    volatility model uses a simple grid approach and is not very efficient but suits for 
+    exemplary purposes
+    """
+    # create paramter space to search over
     MLE = np.zeros((rho_len,sigma_len))
     rhogrid = np.linspace(-0.99,0.99,rho_len)
     sigmagrid = np.linspace(0.01,3,sigma_len)
+    # loop through parameter space grid using SIR_Stoch_vol function to find likelihoods
     for i in np.arange(0,rho_len):
         for j in np.arange(0,sigma_len):
                 current_run = SIR_Stoch_vol(N,Y,rho=rhogrid[i],beta=1,sigma=sigmagrid[j])
                 MLE[i,j] = current_run[2][len(Y)-1]
                 
-                
+    # find max value and index            
     k = np.where(MLE==MLE.max())
     k=[k[0][0],k[1][0]]
-    
+    # return MLE
     return {'rho' : rhogrid[k[0]],'sigma' : sigmagrid[k[1]]}
     
 
 def stochastic_volatility_run(N,T,beta,rho,sigma,x0):
+    """
+    Funtion simply runs N stochastic volatility paths of length T 
+    based on given parameters and returns median path
+    """
+    
     vol = np.zeros((T,N))
     ret = np.zeros((T,N))
     
